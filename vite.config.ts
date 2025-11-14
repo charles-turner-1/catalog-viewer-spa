@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -8,21 +8,22 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/parquet': {
-        target: 'https://object-store.rc.nectar.org.au/v1/AUTH_685340a8089a4923a71222ce93d5d323/access-nri-intake-catalog',
+        target:
+          'https://object-store.rc.nectar.org.au/v1/AUTH_685340a8089a4923a71222ce93d5d323/access-nri-intake-catalog',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/parquet/, ''),
-        secure: true
-      }
+        secure: true,
+      },
     },
     headers: {
       'Cross-Origin-Embedder-Policy': 'require-corp',
       'Cross-Origin-Opener-Policy': 'same-origin',
-    }
+    },
   },
   optimizeDeps: {
-    exclude: ['@duckdb/duckdb-wasm']
+    exclude: ['@duckdb/duckdb-wasm'],
   },
   worker: {
-    format: 'es'
-  }
-})
+    format: 'es',
+  },
+});

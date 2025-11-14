@@ -1,5 +1,5 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
-import CatalogTable from '../components/CatalogTable.vue'
+import { createRouter, createWebHashHistory } from 'vue-router';
+import CatalogTable from '../components/CatalogTable.vue';
 
 const routes = [
   {
@@ -7,31 +7,31 @@ const routes = [
     name: 'Home',
     component: CatalogTable,
     meta: {
-      title: 'ACCESS-NRI Intake'
-    }
+      title: 'ACCESS-NRI Intake',
+    },
   },
   {
     path: '/datastore/:name',
     name: 'DatastoreDetail',
     component: () => import('../components/DatastoreDetail.vue'),
     meta: {
-      title: 'ESM Datastore Details'
-    }
-  }
+      title: 'ESM Datastore Details',
+    },
+  },
   // Future routes can be added here
-]
+];
 
 const router = createRouter({
   history: createWebHashHistory(),
-  routes
-})
+  routes,
+});
 
 // Optional: Set page title based on route meta
 router.beforeEach((to, _from, next) => {
   if (to.meta?.title) {
-    document.title = to.meta.title as string
+    document.title = to.meta.title as string;
   }
-  next()
-})
+  next();
+});
 
-export default router
+export default router;
