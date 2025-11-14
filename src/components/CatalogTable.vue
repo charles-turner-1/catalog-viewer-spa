@@ -5,7 +5,7 @@
         Interactive Catalog
       </h1>
       <p class="text-gray-600 dark:text-gray-300">
-        Explore the metadata catalog with {{ catalogStore.data.length }} entries
+        Explore the ACCESS-NRI Intake Catalog with {{ catalogStore.data.length }} entries
       </p>
     </div>
 
