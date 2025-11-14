@@ -1,14 +1,20 @@
 <template>
-  <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+  <div
+    class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+  >
     <div class="flex items-center justify-between mb-3">
-      <h6 class="text-lg font-semibold text-blue-800 dark:text-blue-200 flex items-center">
+      <h6
+        class="text-lg font-semibold text-blue-800 dark:text-blue-200 flex items-center"
+      >
         <i class="pi pi-code mr-2"></i>
         Quick Start
       </h6>
-      
+
       <!-- Toggle Switch -->
       <div class="flex items-center space-x-3">
-        <span class="text-sm text-blue-700 dark:text-blue-300">ESM Datastore</span>
+        <span class="text-sm text-blue-700 dark:text-blue-300"
+          >ESM Datastore</span
+        >
         <ToggleSwitch
           v-model="isXArrayMode"
           onLabel="xarray"
@@ -16,26 +22,35 @@
           class="w-24"
           size="small"
         />
-        <span class="text-sm text-blue-700 dark:text-blue-300">xarray Dataset</span>
+        <span class="text-sm text-blue-700 dark:text-blue-300"
+          >xarray Dataset</span
+        >
       </div>
     </div>
-    
+
     <p class="text-blue-700 dark:text-blue-300 mb-3">
-      To access this data{{ hasActiveFilters ? ' with current filters' : '' }}:
+      To access this data{{ hasActiveFilters ? " with current filters" : "" }}:
     </p>
-    
+
     <!-- Required Projects Section -->
-    <div v-if="requiredProjects.length > 0" class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+    <div
+      v-if="requiredProjects.length > 0"
+      class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded"
+    >
       <div class="flex items-center mb-2">
         <i class="pi pi-info-circle text-yellow-600 mr-2"></i>
-        <strong class="text-yellow-800 dark:text-yellow-200 text-sm">Required Project Access:</strong>
+        <strong class="text-yellow-800 dark:text-yellow-200 text-sm"
+          >Required Project Access:</strong
+        >
       </div>
       <p class="text-yellow-700 dark:text-yellow-300 text-sm mb-2">
-        You will need to be a member of the following project{{ requiredProjects.length > 1 ? 's' : '' }}:
+        You will need to be a member of the following project{{
+          requiredProjects.length > 1 ? "s" : ""
+        }}:
       </p>
       <div class="flex flex-wrap gap-2">
-        <span 
-          v-for="project in requiredProjects" 
+        <span
+          v-for="project in requiredProjects"
           :key="project"
           class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded text-sm font-mono font-medium"
         >
@@ -43,13 +58,15 @@
         </span>
       </div>
     </div>
-    
-    <pre class="bg-gray-800 text-green-400 p-3 rounded text-sm overflow-x-auto"><code>{{ quickStartCode }}</code></pre>
-    
+
+    <pre
+      class="bg-gray-800 text-green-400 p-3 rounded text-sm overflow-x-auto"
+    ><code>{{ quickStartCode }}</code></pre>
+
     <div class="mt-3">
-      <Button 
-        label="Copy Query Link" 
-        icon="pi pi-share" 
+      <Button
+        label="Copy Query Link"
+        icon="pi pi-share"
         @click="copyQueryLink"
         outlined
         size="small"
@@ -57,26 +74,41 @@
       />
     </div>
     <!-- Long URL confirmation dialog -->
-    <Dialog v-model:visible="showLongUrlDialog" header="Long link warning" modal>
+    <Dialog
+      v-model:visible="showLongUrlDialog"
+      header="Long link warning"
+      modal
+    >
       <p class="text-sm text-gray-700 dark:text-gray-200">
-        The generated link is <strong>{{ pendingUrlLength }}</strong> characters long and may not work
-        in some browsers, servers, or when pasted into email clients.
+        The generated link is <strong>{{ pendingUrlLength }}</strong> characters
+        long and may not work in some browsers, servers, or when pasted into
+        email clients.
       </p>
-      <p class="text-sm text-gray-600 dark:text-gray-300 mt-2">Do you want to copy it to the clipboard anyway?</p>
+      <p class="text-sm text-gray-600 dark:text-gray-300 mt-2">
+        Do you want to copy it to the clipboard anyway?
+      </p>
       <div class="mt-4 flex justify-end space-x-2">
-        <Button label="Cancel" class="p-button-text" @click="cancelCopyLongUrl" />
-        <Button label="Copy anyway" icon="pi pi-copy" @click="confirmCopyLongUrl" />
+        <Button
+          label="Cancel"
+          class="p-button-text"
+          @click="cancelCopyLongUrl"
+        />
+        <Button
+          label="Copy anyway"
+          icon="pi pi-copy"
+          @click="confirmCopyLongUrl"
+        />
       </div>
     </Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import Button from 'primevue/button'
-import ToggleSwitch from 'primevue/toggleswitch'
-import Dialog from 'primevue/dialog'
+import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
+import Button from "primevue/button";
+import ToggleSwitch from "primevue/toggleswitch";
+import Dialog from "primevue/dialog";
 
 // Props
 /**
@@ -90,56 +122,56 @@ interface Props {
    * The name of the intake datastore to target (used when generating
    * the quick-start Python snippet).
    */
-  datastoreName: string
+  datastoreName: string;
 
   /**
    * Object mapping column names to an array of selected filter values.
    * Example: { project: ['xp65'], variable: ['tas'] }
    */
-  currentFilters: Record<string, string[]>
+  currentFilters: Record<string, string[]>;
 
   /**
    * The raw data rows returned by the catalog/search. Each row is expected
    * to be an object and may contain fields such as `path` and `file_id`.
    */
-  rawData: any[]
+  rawData: any[];
 }
 
 /** The typed props object (available in <script setup> via defineProps). */
-const props = defineProps<Props>()
+const props = defineProps<Props>();
 
 // Vue Router
-const router = useRouter()
+const router = useRouter();
 
 // Reactive state
 /**
  * When true, generate xarray/dask conversion calls in the quick-start code.
  * Default: false (generate datastore access/search only).
  */
-const isXArrayMode = ref(false)
+const isXArrayMode = ref(false);
 
 // Dialog / long-URL state
-const MAX_URL_LENGTH = 2083 // conservative legacy-safe limit (IE)
-const showLongUrlDialog = ref(false)
-const pendingLongUrl = ref('')
-const pendingUrlLength = ref(0)
+const MAX_URL_LENGTH = 2083; // conservative legacy-safe limit (IE)
+const showLongUrlDialog = ref(false);
+const pendingLongUrl = ref("");
+const pendingUrlLength = ref(0);
 
 const confirmCopyLongUrl = async () => {
   try {
-    await navigator.clipboard.writeText(pendingLongUrl.value)
-    showLongUrlDialog.value = false
-    console.log('Query link copied to clipboard (long):', pendingLongUrl.value)
+    await navigator.clipboard.writeText(pendingLongUrl.value);
+    showLongUrlDialog.value = false;
+    console.log("Query link copied to clipboard (long):", pendingLongUrl.value);
   } catch (err) {
-    console.error('Failed to copy long link:', err)
+    console.error("Failed to copy long link:", err);
   }
-}
+};
 
 const cancelCopyLongUrl = () => {
-  showLongUrlDialog.value = false
-  pendingLongUrl.value = ''
-  pendingUrlLength.value = 0
-  console.log('User cancelled copying long URL')
-}
+  showLongUrlDialog.value = false;
+  pendingLongUrl.value = "";
+  pendingUrlLength.value = 0;
+  console.log("User cancelled copying long URL");
+};
 
 // Computed properties
 /**
@@ -149,8 +181,10 @@ const cancelCopyLongUrl = () => {
  * a non-empty array.
  */
 const hasActiveFilters = computed(() => {
-  return Object.values(props.currentFilters).some(value => value && value.length > 0)
-})
+  return Object.values(props.currentFilters).some(
+    (value) => value && value.length > 0,
+  );
+});
 
 /**
  * Compute the set of projects that the generated quick-start code will
@@ -166,26 +200,26 @@ const requiredProjects = computed(() => {
   const projects = new Set<string>();
 
   // We always require 'xp65'
-  const XP65 = 'xp65';
+  const XP65 = "xp65";
   projects.add(XP65);
 
   // Look for path fields in the data
-  props.rawData.forEach(row => {
+  props.rawData.forEach((row) => {
     // Check various possible path field names
-    const field = 'path'
+    const field = "path";
 
     if (row[field]) {
-      const pathValue = row[field]
+      const pathValue = row[field];
       // Match pattern /g/data/{PROJECT}/...
-      const match = pathValue.match(/\/g\/data\/([^\/]+)\//)
+      const match = pathValue.match(/\/g\/data\/([^\/]+)\//);
       if (match) {
-        projects.add(match[1])
+        projects.add(match[1]);
       }
     }
-  })
+  });
 
-  return Array.from(projects).sort()
-})
+  return Array.from(projects).sort();
+});
 
 /**
  * Number of unique datasets present in `props.rawData`.
@@ -196,16 +230,16 @@ const requiredProjects = computed(() => {
  */
 const numDatasets = computed(() => {
   // Use a Set to count unique datasets - one fileId per dataset
-  const fileIds = new Set<string>()
+  const fileIds = new Set<string>();
 
-  props.rawData.forEach(row => {
-    if (row['file_id']) {
-      fileIds.add(row['file_id'])
+  props.rawData.forEach((row) => {
+    if (row["file_id"]) {
+      fileIds.add(row["file_id"]);
     }
-  })
+  });
 
-  return fileIds.size
-})
+  return fileIds.size;
+});
 
 /**
  * Generates the quick-start Python code snippet shown to users.
@@ -223,16 +257,16 @@ const numDatasets = computed(() => {
 const quickStartCode = computed(() => {
   let code = `# In an ARE session on Gadi: https://are.nci.org.au/pun/sys/dashboard
 import intake
-datastore = intake.cat.access_nri["${props.datastoreName}"]`
+datastore = intake.cat.access_nri["${props.datastoreName}"]`;
 
   if (hasActiveFilters.value) {
     for (const [column, values] of Object.entries(props.currentFilters)) {
       if (values && values.length > 0) {
         // If multiple values, use an array filter, otherwise use single value
         if (values.length === 1) {
-          code += `\ndatastore = datastore.search(${column}='${values[0]}')`
+          code += `\ndatastore = datastore.search(${column}='${values[0]}')`;
         } else {
-          code += `\ndatastore = datastore.search(${column}=${JSON.stringify(values)})`
+          code += `\ndatastore = datastore.search(${column}=${JSON.stringify(values)})`;
         }
       }
     }
@@ -240,18 +274,17 @@ datastore = intake.cat.access_nri["${props.datastoreName}"]`
 
   // Add XArray conversion if in XArray mode
   if (isXArrayMode.value) {
-
     if (numDatasets.value > 1) {
-      code += `\n# Search contains ${numDatasets.value} datasets. This will generate a dataset dictionary: see https://intake-esm.readthedocs.io/en/stable/`
-      code += `\n# To get to a single dataset, you will need to filter down to a single File ID.`
-      code += `\ndataset_dict = datastore.to_dataset_dict()`
+      code += `\n# Search contains ${numDatasets.value} datasets. This will generate a dataset dictionary: see https://intake-esm.readthedocs.io/en/stable/`;
+      code += `\n# To get to a single dataset, you will need to filter down to a single File ID.`;
+      code += `\ndataset_dict = datastore.to_dataset_dict()`;
     } else {
-      code += `\ndataset = datastore.to_dask()`
+      code += `\ndataset = datastore.to_dask()`;
     }
   }
 
-  return code
-})
+  return code;
+});
 
 /**
  * Copy a link to the current page including active filters to the clipboard.
@@ -264,48 +297,48 @@ datastore = intake.cat.access_nri["${props.datastoreName}"]`
  * @returns Promise<void> that resolves when the clipboard write completes.
  */
 const copyQueryLink = async (): Promise<void> => {
-  const query: Record<string, string> = {}
+  const query: Record<string, string> = {};
 
   // Add filter parameters to URL
   for (const [column, values] of Object.entries(props.currentFilters)) {
     if (values && values.length > 0) {
-      query[`${column}_filter`] = values.join(',')
+      query[`${column}_filter`] = values.join(",");
     }
   }
-  
+
   // Use Vue Router's resolve to get the full URL
   const route = router.resolve({
-    name: 'DatastoreDetail',
+    name: "DatastoreDetail",
     params: { name: props.datastoreName },
-    query
-  })
-  
+    query,
+  });
+
   // Get the full URL by combining the origin with the resolved route
-  const fullUrl = new URL(route.href, window.location.origin).toString()
-  
+  const fullUrl = new URL(route.href, window.location.origin).toString();
+
   // If URL is long, show dialog to confirm before copying
   if (fullUrl.length > MAX_URL_LENGTH) {
-    pendingLongUrl.value = fullUrl
-    pendingUrlLength.value = fullUrl.length
-    showLongUrlDialog.value = true
-    return
+    pendingLongUrl.value = fullUrl;
+    pendingUrlLength.value = fullUrl.length;
+    showLongUrlDialog.value = true;
+    return;
   }
 
   try {
-    await navigator.clipboard.writeText(fullUrl)
+    await navigator.clipboard.writeText(fullUrl);
     // TODO: Show toast notification
-    console.log('Query link copied to clipboard:', fullUrl)
+    console.log("Query link copied to clipboard:", fullUrl);
   } catch (err) {
-    console.error('Failed to copy link:');
+    console.error("Failed to copy link:");
     console.error(err);
   }
-}
+};
 </script>
 
 <style scoped>
 /* Code formatting */
 pre code {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
   line-height: 1.4;
 }
 </style>

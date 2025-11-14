@@ -1,8 +1,8 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import * as duckdb from '@duckdb/duckdb-wasm'
-import duckdb_wasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url'
-import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url'
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import * as duckdb from "@duckdb/duckdb-wasm";
+import duckdb_wasm from "@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url";
+import mvp_worker from "@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url";
 
 /**
  * A single normalized catalog row returned by querying the metacatalog
@@ -11,27 +11,27 @@ import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?ur
  */
 export interface CatalogRow {
   /** Display name or unique identifier for the catalog entry. */
-  name: string
+  name: string;
   /** One or more model identifiers associated with this entry. */
-  model: string[]
+  model: string[];
   /** Human-readable description of the entry. */
-  description: string
+  description: string;
   /** One or more realms where this entry is applicable. */
-  realm: string[]
+  realm: string[];
   /** One or more frequency tags associated with the entry. */
-  frequency: string[]
+  frequency: string[];
   /** One or more variable names referenced by this entry. */
-  variable: string[]
+  variable: string[];
   /** Optional YAML configuration payload attached to the entry (if any). */
-  yaml?: string
+  yaml?: string;
   /**
    * Precomputed searchable strings created from list fields. These make
    * client-side global search faster and simpler.
    */
-  searchableModel?: string
-  searchableRealm?: string
-  searchableFrequency?: string
-  searchableVariable?: string
+  searchableModel?: string;
+  searchableRealm?: string;
+  searchableFrequency?: string;
+  searchableVariable?: string;
 }
 
 /**
@@ -41,28 +41,29 @@ export interface CatalogRow {
  */
 export interface DatastoreCache {
   /** Raw transformed rows for use in tables and filters. */
-  data: any[]
+  data: any[];
   /** Number of records in `data`. */
-  totalRecords: number
+  totalRecords: number;
   /** Column names available for display in tables. */
-  columns: string[]
+  columns: string[];
   /** Precomputed filter options for each column (unique sorted values). */
-  filterOptions: Record<string, string[]>
+  filterOptions: Record<string, string[]>;
   /** Whether this cache entry is currently loading. */
-  loading: boolean
+  loading: boolean;
   /** Any error message encountered while loading this datastore. */
-  error: string | null
+  error: string | null;
   /** Timestamp when the datastore was last fetched. */
-  lastFetched: Date
+  lastFetched: Date;
 }
 
 /**
  * URL to the metacatalog parquet file. Uses a CORS proxy in production
  * and a local API path in development.
  */
-const METACAT_URL = process.env.NODE_ENV === 'production'
-  ? 'https://corsproxy.io/?https://object-store.rc.nectar.org.au/v1/AUTH_685340a8089a4923a71222ce93d5d323/access-nri-intake-catalog/metacatalog.parquet'
-  : '/api/parquet/metacatalog.parquet'
+const METACAT_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://corsproxy.io/?https://object-store.rc.nectar.org.au/v1/AUTH_685340a8089a4923a71222ce93d5d323/access-nri-intake-catalog/metacatalog.parquet"
+    : "/api/parquet/metacatalog.parquet";
 
 /** DuckDB WASM bundles used by the client; selectBundle picks the best one. */
 const DUCKDB_BUNDLES: duckdb.DuckDBBundles = {
@@ -70,7 +71,7 @@ const DUCKDB_BUNDLES: duckdb.DuckDBBundles = {
     mainModule: duckdb_wasm,
     mainWorker: mvp_worker,
   },
-}
+};
 
 /**
  * SQL query used to normalize the metacatalog parquet into a predictable
@@ -104,25 +105,23 @@ SELECT
   END as variable,
   yaml
 FROM read_parquet('metacatalog.parquet')
-`
+`;
 
-export const useCatalogStore = defineStore('catalog', () => {
+export const useCatalogStore = defineStore("catalog", () => {
   // State
-  const data = ref<CatalogRow[]>([])
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-  const rawDataSample = ref<any[]>([]) // For debugging - store clean sample
-  
-  // Datastore cache state
-  const datastoreCache = ref<Record<string, DatastoreCache>>({})
-  
-  // Getters
-  const catalogCount = computed(() => data.value.length)
-  const hasData = computed(() => data.value.length > 0)
-  const isLoading = computed(() => loading.value)
-  const hasError = computed(() => error.value !== null)
-  
+  const data = ref<CatalogRow[]>([]);
+  const loading = ref(false);
+  const error = ref<string | null>(null);
+  const rawDataSample = ref<any[]>([]); // For debugging - store clean sample
 
+  // Datastore cache state
+  const datastoreCache = ref<Record<string, DatastoreCache>>({});
+
+  // Getters
+  const catalogCount = computed(() => data.value.length);
+  const hasData = computed(() => data.value.length > 0);
+  const isLoading = computed(() => loading.value);
+  const hasError = computed(() => error.value !== null);
 
   /**
    * Download the parquet file from the configured endpoint and return it as a
@@ -134,13 +133,12 @@ export const useCatalogStore = defineStore('catalog', () => {
     return fetch(METACAT_URL)
       .then((response) => {
         if (!response.ok) {
-          throw new Error(`Failed to fetch parquet file: ${response.status}`)
+          throw new Error(`Failed to fetch parquet file: ${response.status}`);
         }
-        return response.arrayBuffer()
+        return response.arrayBuffer();
       })
-      .then((arrayBuffer) => new Uint8Array(arrayBuffer))
+      .then((arrayBuffer) => new Uint8Array(arrayBuffer));
   }
-
 
   /**
    * Initialize a DuckDB Async instance using the configured bundles and
@@ -149,16 +147,16 @@ export const useCatalogStore = defineStore('catalog', () => {
    */
   async function initializeDuckDB() {
     const bundle = DUCKDB_BUNDLES.mvp;
-    const worker = new Worker(bundle.mainWorker!)
-    const logger = new duckdb.ConsoleLogger()
-    const db = new duckdb.AsyncDuckDB(logger, worker)
+    const worker = new Worker(bundle.mainWorker!);
+    const logger = new duckdb.ConsoleLogger();
+    const db = new duckdb.AsyncDuckDB(logger, worker);
 
-    await db.instantiate(bundle.mainModule)
-    const conn = await db.connect()
+    await db.instantiate(bundle.mainModule);
+    const conn = await db.connect();
 
-    return { db, conn }
+    return { db, conn };
   }
-  
+
   /**
    * Register the provided parquet bytes under a fixed filename and run
    * the normalization query. Returns an array of `CatalogRow` items.
@@ -167,80 +165,93 @@ export const useCatalogStore = defineStore('catalog', () => {
    * @param conn - Active connection associated with `db`
    * @param uint8Array - Contents of the parquet file
    */
-  async function queryMetaCatalogPq(db: duckdb.AsyncDuckDB, conn: duckdb.AsyncDuckDBConnection, uint8Array: Uint8Array): Promise<CatalogRow[]> {
+  async function queryMetaCatalogPq(
+    db: duckdb.AsyncDuckDB,
+    conn: duckdb.AsyncDuckDBConnection,
+    uint8Array: Uint8Array,
+  ): Promise<CatalogRow[]> {
     // Register the parquet file
-    await db.registerFileBuffer('metacatalog.parquet', uint8Array)
+    await db.registerFileBuffer("metacatalog.parquet", uint8Array);
 
     // Query with explicit array handling
-    const queryResult = await conn.query(METACAT_PARQUET_QUERY)
+    const queryResult = await conn.query(METACAT_PARQUET_QUERY);
 
     // Get raw data for inspection
-    const rawData = queryResult.toArray()
+    const rawData = queryResult.toArray();
 
     // Convert proxies to plain objects for better debugging
     const cleanRawSample = rawData.slice(0, 3).map((row: any) => {
-      const cleanRow: any = {}
+      const cleanRow: any = {};
       for (const key in row) {
-        const value = row[key]
+        const value = row[key];
         cleanRow[key] = {
           value: value,
           type: typeof value,
           isArray: Array.isArray(value),
           constructor: value?.constructor?.name,
           // If it's a Vector or similar, try to convert to array
-          asArray: value?.toArray ? value.toArray() : value
-        }
+          asArray: value?.toArray ? value.toArray() : value,
+        };
       }
-      return cleanRow
-    })
+      return cleanRow;
+    });
 
     // Store clean sample for debugging
-    rawDataSample.value = cleanRawSample
-    console.log('🔍 Clean raw data sample (check store.rawDataSample):', cleanRawSample)
+    rawDataSample.value = cleanRawSample;
+    console.log(
+      "🔍 Clean raw data sample (check store.rawDataSample):",
+      cleanRawSample,
+    );
 
     // Transform to our interface with proper array handling
     const transformedData = rawData.map((row: any) => {
       const processListField = (value: any): string[] => {
-        if (value === null || value === undefined) return []
+        if (value === null || value === undefined) return [];
 
         // Handle DuckDB Vector objects
-        if (value && typeof value.toArray === 'function') {
-          return value.toArray().filter((v: any) => v !== null && v !== undefined).map(String)
+        if (value && typeof value.toArray === "function") {
+          return value
+            .toArray()
+            .filter((v: any) => v !== null && v !== undefined)
+            .map(String);
         }
 
-        if (Array.isArray(value)) return value.filter(v => v !== null && v !== undefined).map(String)
+        if (Array.isArray(value))
+          return value.filter((v) => v !== null && v !== undefined).map(String);
 
-        if (typeof value === 'string') {
+        if (typeof value === "string") {
           // Handle potential JSON strings or comma-separated values
           try {
-            const parsed = JSON.parse(value)
-            return Array.isArray(parsed) ? parsed.map(String) : [String(parsed)]
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed)
+              ? parsed.map(String)
+              : [String(parsed)];
           } catch {
             // If not JSON, treat as single value
-            return [value]
+            return [value];
           }
         }
-        return [String(value)]
-      }
+        return [String(value)];
+      };
 
       return {
-        name: row.name || '',
+        name: row.name || "",
         model: processListField(row.model),
-        description: row.description || '',
+        description: row.description || "",
         realm: processListField(row.realm),
         frequency: processListField(row.frequency),
         variable: processListField(row.variable),
-        yaml: row.yaml || '',  // Add YAML field
+        yaml: row.yaml || "", // Add YAML field
         // Add searchable versions for better search
-        searchableModel: processListField(row.model).join(', '),
-        searchableRealm: processListField(row.realm).join(', '),
-        searchableFrequency: processListField(row.frequency).join(', '),
-        searchableVariable: processListField(row.variable).join(', ')
-      }
-    })
+        searchableModel: processListField(row.model).join(", "),
+        searchableRealm: processListField(row.realm).join(", "),
+        searchableFrequency: processListField(row.frequency).join(", "),
+        searchableVariable: processListField(row.variable).join(", "),
+      };
+    });
 
-    console.log('✅ Transformed data sample:', transformedData.slice(0, 2))
-    return transformedData
+    console.log("✅ Transformed data sample:", transformedData.slice(0, 2));
+    return transformedData;
   }
 
   /**
@@ -254,89 +265,115 @@ export const useCatalogStore = defineStore('catalog', () => {
    * @param uint8Array - Bytes of the datastore parquet
    * @param datastoreName - Logical name used to register the buffer
    */
-  async function queryEsmDatastore(db: duckdb.AsyncDuckDB, conn: duckdb.AsyncDuckDBConnection, uint8Array: Uint8Array, datastoreName: string): Promise<any[]> {
+  async function queryEsmDatastore(
+    db: duckdb.AsyncDuckDB,
+    conn: duckdb.AsyncDuckDBConnection,
+    uint8Array: Uint8Array,
+    datastoreName: string,
+  ): Promise<any[]> {
     // Register the parquet file with a dynamic name
-    const fileName = `${datastoreName}.parquet`
-    await db.registerFileBuffer(fileName, uint8Array)
+    const fileName = `${datastoreName}.parquet`;
+    await db.registerFileBuffer(fileName, uint8Array);
 
     // First, inspect the schema to understand the columns
     const schemaResult = await conn.query(`
       DESCRIBE SELECT * FROM read_parquet('${fileName}') LIMIT 1
-    `)
+    `);
 
-    const schemaData = schemaResult.toArray()
-    console.log('📊 ESM Datastore schema:', schemaData)
+    const schemaData = schemaResult.toArray();
+    console.log("📊 ESM Datastore schema:", schemaData);
 
     // Get all column names from the schema
-    const columns = schemaData.map((row: any) => row.column_name)
-    console.log('📋 Available columns:', columns)
+    const columns = schemaData.map((row: any) => row.column_name);
+    console.log("📋 Available columns:", columns);
 
     // Build dynamic query - handle arrays for all columns dynamically
-    const selectClauses = columns.map(column => {
-      return `
+    const selectClauses = columns
+      .map((column) => {
+        return `
         CASE 
           WHEN typeof(${column}) LIKE '%[]%' THEN ${column}::VARCHAR[]
           WHEN ${column} IS NOT NULL THEN [${column}::VARCHAR]
           ELSE []::VARCHAR[]
-        END as ${column}`
-    }).join(',')
+        END as ${column}`;
+      })
+      .join(",");
 
     const dynamicQuery = `
       SELECT ${selectClauses}
       FROM read_parquet('${fileName}')
-    `
+    `;
 
-    console.log('🔍 Dynamic query:', dynamicQuery)
+    console.log("🔍 Dynamic query:", dynamicQuery);
 
     // Execute the query
-    const queryResult = await conn.query(dynamicQuery)
-    const rawData = queryResult.toArray()
+    const queryResult = await conn.query(dynamicQuery);
+    const rawData = queryResult.toArray();
 
     // Transform the data with generic array handling
     const transformedData = rawData.map((row: any) => {
       const processField = (value: any): any => {
-        if (value === null || value === undefined) return null
+        if (value === null || value === undefined) return null;
 
         // Handle DuckDB Vector objects for arrays
-        if (value && typeof value.toArray === 'function') {
-          const arrayValue = value.toArray().filter((v: any) => v !== null && v !== undefined)
-          return arrayValue.length > 1 ? arrayValue.map(String) : (arrayValue[0] ? String(arrayValue[0]) : null)
+        if (value && typeof value.toArray === "function") {
+          const arrayValue = value
+            .toArray()
+            .filter((v: any) => v !== null && v !== undefined);
+          return arrayValue.length > 1
+            ? arrayValue.map(String)
+            : arrayValue[0]
+              ? String(arrayValue[0])
+              : null;
         }
 
         // Handle regular arrays
         if (Array.isArray(value)) {
-          const filteredArray = value.filter(v => v !== null && v !== undefined)
-          return filteredArray.length > 1 ? filteredArray.map(String) : (filteredArray[0] ? String(filteredArray[0]) : null)
+          const filteredArray = value.filter(
+            (v) => v !== null && v !== undefined,
+          );
+          return filteredArray.length > 1
+            ? filteredArray.map(String)
+            : filteredArray[0]
+              ? String(filteredArray[0])
+              : null;
         }
 
         // Handle string values
-        if (typeof value === 'string') {
+        if (typeof value === "string") {
           try {
-            const parsed = JSON.parse(value)
+            const parsed = JSON.parse(value);
             if (Array.isArray(parsed)) {
-              return parsed.length > 1 ? parsed.map(String) : (parsed[0] ? String(parsed[0]) : null)
+              return parsed.length > 1
+                ? parsed.map(String)
+                : parsed[0]
+                  ? String(parsed[0])
+                  : null;
             }
-            return String(parsed)
+            return String(parsed);
           } catch {
-            return String(value)
+            return String(value);
           }
         }
 
-        return value
-      }
+        return value;
+      };
 
-      const transformedRow: any = {}
-      columns.forEach(column => {
-        transformedRow[column] = processField(row[column])
-      })
+      const transformedRow: any = {};
+      columns.forEach((column) => {
+        transformedRow[column] = processField(row[column]);
+      });
 
-      return transformedRow
-    })
+      return transformedRow;
+    });
 
-    console.log('✅ ESM Datastore transformed data sample:', transformedData.slice(0, 2))
-    console.log('📊 Total records:', transformedData.length)
+    console.log(
+      "✅ ESM Datastore transformed data sample:",
+      transformedData.slice(0, 2),
+    );
+    console.log("📊 Total records:", transformedData.length);
 
-    return transformedData
+    return transformedData;
   }
 
   // Actions
@@ -348,49 +385,49 @@ export const useCatalogStore = defineStore('catalog', () => {
   async function fetchCatalogData() {
     // If we already have data and no error, don't fetch again
     if (data.value.length > 0 && !error.value) {
-      console.log('✅ Using cached metacatalog data')
-      return
+      console.log("✅ Using cached metacatalog data");
+      return;
     }
-    
-    loading.value = true
-    error.value = null
-    
-    let db: duckdb.AsyncDuckDB | null = null
-    let conn: duckdb.AsyncDuckDBConnection | null = null
-    
+
+    loading.value = true;
+    error.value = null;
+
+    let db: duckdb.AsyncDuckDB | null = null;
+    let conn: duckdb.AsyncDuckDBConnection | null = null;
+
     try {
-      console.log('🚀 Fetching catalog data...')
-      
+      console.log("🚀 Fetching catalog data...");
+
       // Fetch parquet file and initialize DuckDB concurrently
       const [uint8Array, dbConnection] = await Promise.all([
         fetchMetaCatFile(),
-        initializeDuckDB()
-      ])
-      
-      console.log(`📦 Downloaded ${uint8Array.length} bytes`)
-      db = dbConnection.db
-      conn = dbConnection.conn
-      
+        initializeDuckDB(),
+      ]);
+
+      console.log(`📦 Downloaded ${uint8Array.length} bytes`);
+      db = dbConnection.db;
+      conn = dbConnection.conn;
+
       // Query and transform data
-      data.value = await queryMetaCatalogPq(db, conn, uint8Array)
-      console.log(`📚 Loaded ${data.value.length} catalog entries`)
-      
+      data.value = await queryMetaCatalogPq(db, conn, uint8Array);
+      console.log(`📚 Loaded ${data.value.length} catalog entries`);
     } catch (err) {
-      console.error('❌ Error loading catalog data:', err)
-      error.value = err instanceof Error ? err.message : 'An unknown error occurred'
+      console.error("❌ Error loading catalog data:", err);
+      error.value =
+        err instanceof Error ? err.message : "An unknown error occurred";
     } finally {
       // Cleanup
-      if (conn) await conn.close()
-      if (db) await db.terminate()
-      loading.value = false
+      if (conn) await conn.close();
+      if (db) await db.terminate();
+      loading.value = false;
     }
   }
 
   /** Reset catalog-related state held by the store. */
   function clearData() {
-    data.value = []
-    rawDataSample.value = []
-    error.value = null
+    data.value = [];
+    rawDataSample.value = [];
+    error.value = null;
   }
 
   // Helper functions for datastore management
@@ -402,38 +439,38 @@ export const useCatalogStore = defineStore('catalog', () => {
    * @param data - array of rows (objects) to scan for unique values
    */
   function generateFilterOptions(data: any[]): Record<string, string[]> {
-    const options: Record<string, Set<string>> = {}
-    
-    data.forEach(row => {
+    const options: Record<string, Set<string>> = {};
+
+    data.forEach((row) => {
       for (const [column, value] of Object.entries(row)) {
         if (!options[column]) {
-          options[column] = new Set()
+          options[column] = new Set();
         }
-        
+
         if (Array.isArray(value)) {
-          value.forEach(item => {
+          value.forEach((item) => {
             if (item != null && String(item).trim()) {
-              options[column]?.add(String(item))
+              options[column]?.add(String(item));
             }
-          })
+          });
         } else if (value != null && String(value).trim()) {
-          options[column]?.add(String(value))
+          options[column]?.add(String(value));
         }
       }
-    })
-    
+    });
+
     // Convert Sets to sorted arrays
-    const result: Record<string, string[]> = {}
+    const result: Record<string, string[]> = {};
     for (const [column, optionSet] of Object.entries(options)) {
-      result[column] = Array.from(optionSet).sort()
+      result[column] = Array.from(optionSet).sort();
     }
-    
-    return result
+
+    return result;
   }
 
   function setupColumns(dataColumns: string[]): string[] {
     // Filter out the index column from display but keep it for data-key
-    return dataColumns.filter(col => col !== '__index_level_0__')
+    return dataColumns.filter((col) => col !== "__index_level_0__");
   }
 
   // Datastore management functions
@@ -446,20 +483,20 @@ export const useCatalogStore = defineStore('catalog', () => {
    */
   async function loadDatastore(datastoreName: string): Promise<DatastoreCache> {
     // Check if already cached and not loading
-    const cached = datastoreCache.value[datastoreName]
+    const cached = datastoreCache.value[datastoreName];
     if (cached && cached.data.length > 0 && !cached.loading) {
-      console.log(`✅ Using cached data for ${datastoreName}`)
-      return cached
+      console.log(`✅ Using cached data for ${datastoreName}`);
+      return cached;
     }
 
     // If currently loading, wait for it to complete
     if (cached?.loading) {
-      console.log(`⏳ Already loading ${datastoreName}, waiting...`)
+      console.log(`⏳ Already loading ${datastoreName}, waiting...`);
       // Poll until loading is complete
       while (datastoreCache.value[datastoreName]?.loading) {
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
-      return datastoreCache.value[datastoreName] || createEmptyCache()
+      return datastoreCache.value[datastoreName] || createEmptyCache();
     }
 
     // Initialize cache entry
@@ -470,42 +507,52 @@ export const useCatalogStore = defineStore('catalog', () => {
       filterOptions: {},
       loading: true,
       error: null,
-      lastFetched: new Date()
-    }
+      lastFetched: new Date(),
+    };
 
-    let db: duckdb.AsyncDuckDB | null = null
-    let conn: duckdb.AsyncDuckDBConnection | null = null
+    let db: duckdb.AsyncDuckDB | null = null;
+    let conn: duckdb.AsyncDuckDBConnection | null = null;
 
     try {
-      console.log(`🚀 Loading datastore: ${datastoreName}`)
+      console.log(`🚀 Loading datastore: ${datastoreName}`);
 
       // Construct the parquet file URL for this specific datastore
-      const datastoreUrl = process.env.NODE_ENV === 'production'
-        ? `https://corsproxy.io/?https://object-store.rc.nectar.org.au/v1/AUTH_685340a8089a4923a71222ce93d5d323/access-nri-intake-catalog/source/${datastoreName}.parquet`
-        : `/api/parquet/source/${datastoreName}.parquet`
+      const datastoreUrl =
+        process.env.NODE_ENV === "production"
+          ? `https://corsproxy.io/?https://object-store.rc.nectar.org.au/v1/AUTH_685340a8089a4923a71222ce93d5d323/access-nri-intake-catalog/source/${datastoreName}.parquet`
+          : `/api/parquet/source/${datastoreName}.parquet`;
 
       // Fetch parquet file and initialize DuckDB concurrently
       const [response, dbConnection] = await Promise.all([
         fetch(datastoreUrl),
-        initializeDuckDB()
-      ])
+        initializeDuckDB(),
+      ]);
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch datastore parquet file: ${response.status}`)
+        throw new Error(
+          `Failed to fetch datastore parquet file: ${response.status}`,
+        );
       }
 
-      const arrayBuffer = await response.arrayBuffer()
-      const uint8Array = new Uint8Array(arrayBuffer)
-      console.log(`📦 Downloaded ${uint8Array.length} bytes for ${datastoreName}`)
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      console.log(
+        `📦 Downloaded ${uint8Array.length} bytes for ${datastoreName}`,
+      );
 
-      db = dbConnection.db
-      conn = dbConnection.conn
+      db = dbConnection.db;
+      conn = dbConnection.conn;
 
       // Query the ESM datastore data
-      const datastoreData = await queryEsmDatastore(db, conn, uint8Array, datastoreName)
-      const columns = Object.keys(datastoreData[0] || {})
-      const displayColumns = setupColumns(columns)
-      const filterOptions = generateFilterOptions(datastoreData)
+      const datastoreData = await queryEsmDatastore(
+        db,
+        conn,
+        uint8Array,
+        datastoreName,
+      );
+      const columns = Object.keys(datastoreData[0] || {});
+      const displayColumns = setupColumns(columns);
+      const filterOptions = generateFilterOptions(datastoreData);
 
       // Update cache with loaded data
       datastoreCache.value[datastoreName] = {
@@ -515,16 +562,18 @@ export const useCatalogStore = defineStore('catalog', () => {
         filterOptions,
         loading: false,
         error: null,
-        lastFetched: new Date()
-      }
+        lastFetched: new Date(),
+      };
 
-      console.log(`✅ Loaded ${datastoreData.length} records for ${datastoreName}`)
-      return datastoreCache.value[datastoreName]
-
+      console.log(
+        `✅ Loaded ${datastoreData.length} records for ${datastoreName}`,
+      );
+      return datastoreCache.value[datastoreName];
     } catch (err) {
-      console.error('❌ Error loading datastore:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load datastore'
-      
+      console.error("❌ Error loading datastore:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load datastore";
+
       datastoreCache.value[datastoreName] = {
         data: [],
         totalRecords: 0,
@@ -532,14 +581,14 @@ export const useCatalogStore = defineStore('catalog', () => {
         filterOptions: {},
         loading: false,
         error: errorMessage,
-        lastFetched: new Date()
-      }
-      
-      throw err
+        lastFetched: new Date(),
+      };
+
+      throw err;
     } finally {
       // Cleanup DuckDB resources
-      if (conn) await conn.close()
-      if (db) await db.terminate()
+      if (conn) await conn.close();
+      if (db) await db.terminate();
     }
   }
 
@@ -550,26 +599,26 @@ export const useCatalogStore = defineStore('catalog', () => {
       columns: [],
       filterOptions: {},
       loading: false,
-      error: 'Datastore not found',
-      lastFetched: new Date()
-    }
+      error: "Datastore not found",
+      lastFetched: new Date(),
+    };
   }
 
   function getDatastoreFromCache(datastoreName: string): DatastoreCache | null {
-    return datastoreCache.value[datastoreName] || null
+    return datastoreCache.value[datastoreName] || null;
   }
 
   function isDatastoreLoading(datastoreName: string): boolean {
-    return datastoreCache.value[datastoreName]?.loading || false
+    return datastoreCache.value[datastoreName]?.loading || false;
   }
 
   function clearDatastoreCache(datastoreName?: string) {
     if (datastoreName) {
-      delete datastoreCache.value[datastoreName]
-      console.log(`🗑️ Cleared cache for datastore: ${datastoreName}`)
+      delete datastoreCache.value[datastoreName];
+      console.log(`🗑️ Cleared cache for datastore: ${datastoreName}`);
     } else {
-      datastoreCache.value = {}
-      console.log('🗑️ Cleared all datastore cache')
+      datastoreCache.value = {};
+      console.log("🗑️ Cleared all datastore cache");
     }
   }
 
@@ -580,28 +629,28 @@ export const useCatalogStore = defineStore('catalog', () => {
     error,
     rawDataSample,
     datastoreCache,
-    
+
     // Getters
     catalogCount,
     hasData,
     isLoading,
     hasError,
-    
+
     // Actions
     fetchCatalogData,
     clearData,
-    
+
     // Datastore management
     loadDatastore,
     getDatastoreFromCache,
     isDatastoreLoading,
     clearDatastoreCache,
-    
+
     // Utility functions for other components
     fetchMetaCatFile,
     initializeDuckDB,
     queryEsmDatastore,
     generateFilterOptions,
-    setupColumns
-  }
-})
+    setupColumns,
+  };
+});
