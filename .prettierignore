@@ -1,0 +1,15 @@
+# Node / build
+node_modules
+dist
+coverage
+
+# IDE
+.vscode
+.idea
+
+# static assets / large binaries
+*.wasm
+*.parquet
+
+# lockfiles (optional)
+package-lock.json
