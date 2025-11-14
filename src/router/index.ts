@@ -7,7 +7,7 @@ const routes = [
     name: 'Home',
     component: CatalogTable,
     meta: {
-      title: 'Interactive Catalog'
+      title: 'ACCESS-NRI Intake'
     }
   },
   {
