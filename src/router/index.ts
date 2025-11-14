@@ -10,12 +10,15 @@ const routes = [
       title: 'Interactive Catalog'
     }
   },
+  {
+    path: '/datastore/:name',
+    name: 'DatastoreDetail',
+    component: () => import('../components/DatastoreDetail.vue'),
+    meta: {
+      title: 'ESM Datastore Details'
+    }
+  }
   // Future routes can be added here
-  // {
-  //   path: '/about',
-  //   name: 'About',
-  //   component: () => import('../views/About.vue')
-  // }
 ]
 
 const router = createRouter({

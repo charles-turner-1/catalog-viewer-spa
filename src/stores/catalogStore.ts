@@ -72,7 +72,7 @@ export const useCatalogStore = defineStore('catalog', () => {
     return { db, conn }
   }
 
-  async function queryParquetData(db: duckdb.AsyncDuckDB, conn: duckdb.AsyncDuckDBConnection, uint8Array: Uint8Array): Promise<CatalogRow[]> {
+  async function queryMetaCatalogPq(db: duckdb.AsyncDuckDB, conn: duckdb.AsyncDuckDBConnection, uint8Array: Uint8Array): Promise<CatalogRow[]> {
     // Register the parquet file
     await db.registerFileBuffer('metacatalog.parquet', uint8Array)
     
@@ -180,6 +180,91 @@ export const useCatalogStore = defineStore('catalog', () => {
     return transformedData
   }
 
+  async function queryEsmDatastore(db: duckdb.AsyncDuckDB, conn: duckdb.AsyncDuckDBConnection, uint8Array: Uint8Array, datastoreName: string): Promise<any[]> {
+    // Register the parquet file with a dynamic name
+    const fileName = `${datastoreName}.parquet`
+    await db.registerFileBuffer(fileName, uint8Array)
+    
+    // First, inspect the schema to understand the columns
+    const schemaResult = await conn.query(`
+      DESCRIBE SELECT * FROM read_parquet('${fileName}') LIMIT 1
+    `)
+    
+    const schemaData = schemaResult.toArray()
+    console.log('📊 ESM Datastore schema:', schemaData)
+    
+    // Get all column names from the schema
+    const columns = schemaData.map((row: any) => row.column_name)
+    console.log('📋 Available columns:', columns)
+    
+    // Build dynamic query - handle arrays for all columns dynamically
+    const selectClauses = columns.map(column => {
+      return `
+        CASE 
+          WHEN typeof(${column}) LIKE '%[]%' THEN ${column}::VARCHAR[]
+          WHEN ${column} IS NOT NULL THEN [${column}::VARCHAR]
+          ELSE []::VARCHAR[]
+        END as ${column}`
+    }).join(',')
+    
+    const dynamicQuery = `
+      SELECT ${selectClauses}
+      FROM read_parquet('${fileName}')
+    `
+    
+    console.log('🔍 Dynamic query:', dynamicQuery)
+    
+    // Execute the query
+    const queryResult = await conn.query(dynamicQuery)
+    const rawData = queryResult.toArray()
+    
+    // Transform the data with generic array handling
+    const transformedData = rawData.map((row: any) => {
+      const processField = (value: any): any => {
+        if (value === null || value === undefined) return null
+        
+        // Handle DuckDB Vector objects for arrays
+        if (value && typeof value.toArray === 'function') {
+          const arrayValue = value.toArray().filter((v: any) => v !== null && v !== undefined)
+          return arrayValue.length > 1 ? arrayValue.map(String) : (arrayValue[0] ? String(arrayValue[0]) : null)
+        }
+        
+        // Handle regular arrays
+        if (Array.isArray(value)) {
+          const filteredArray = value.filter(v => v !== null && v !== undefined)
+          return filteredArray.length > 1 ? filteredArray.map(String) : (filteredArray[0] ? String(filteredArray[0]) : null)
+        }
+        
+        // Handle string values
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value)
+            if (Array.isArray(parsed)) {
+              return parsed.length > 1 ? parsed.map(String) : (parsed[0] ? String(parsed[0]) : null)
+            }
+            return String(parsed)
+          } catch {
+            return String(value)
+          }
+        }
+        
+        return value
+      }
+
+      const transformedRow: any = {}
+      columns.forEach(column => {
+        transformedRow[column] = processField(row[column])
+      })
+      
+      return transformedRow
+    })
+
+    console.log('✅ ESM Datastore transformed data sample:', transformedData.slice(0, 2))
+    console.log('📊 Total records:', transformedData.length)
+    
+    return transformedData
+  }
+
   // Actions
   async function fetchCatalogData() {
     loading.value = true
@@ -201,7 +286,7 @@ export const useCatalogStore = defineStore('catalog', () => {
       conn = dbConnection.conn
       
       // Query and transform data
-      data.value = await queryParquetData(db, conn, uint8Array)
+      data.value = await queryMetaCatalogPq(db, conn, uint8Array)
       console.log(`📚 Loaded ${data.value.length} catalog entries`)
       
     } catch (err) {
@@ -236,6 +321,11 @@ export const useCatalogStore = defineStore('catalog', () => {
     
     // Actions
     fetchCatalogData,
-    clearData
+    clearData,
+    
+    // Utility functions for other components
+    fetchParquetFile,
+    initializeDuckDB,
+    queryEsmDatastore
   }
 })
