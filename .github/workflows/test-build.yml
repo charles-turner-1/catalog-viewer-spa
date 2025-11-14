@@ -1,0 +1,40 @@
+name: Test Build
+
+on:
+  push:
+    branches-ignore: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '23'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build project (includes type checking)
+      run: NODE_ENV=production npm run build
+
+    - name: Check build artifacts
+      run: |
+        if [ ! -d "dist" ]; then
+          echo "Build failed: dist directory not created"
+          exit 1
+        fi
+        if [ ! -f "dist/index.html" ]; then
+          echo "Build failed: index.html not found in dist"
+          exit 1
+        fi
+        echo "Build successful! Generated files:"
+        ls -la dist/
