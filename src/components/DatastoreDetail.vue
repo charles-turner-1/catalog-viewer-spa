@@ -106,6 +106,7 @@
       <QuickStartCode 
         :datastore-name="datastoreName" 
         :current-filters="currentFilters"
+        :raw-data="rawData"
         class="mb-6"
       />
 

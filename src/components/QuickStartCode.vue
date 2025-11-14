@@ -23,6 +23,27 @@
     <p class="text-blue-700 dark:text-blue-300 mb-3">
       To access this data{{ hasActiveFilters ? ' with current filters' : '' }}:
     </p>
+    
+    <!-- Required Projects Section -->
+    <div v-if="requiredProjects.length > 0" class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+      <div class="flex items-center mb-2">
+        <i class="pi pi-info-circle text-yellow-600 mr-2"></i>
+        <strong class="text-yellow-800 dark:text-yellow-200 text-sm">Required Project Access:</strong>
+      </div>
+      <p class="text-yellow-700 dark:text-yellow-300 text-sm mb-2">
+        You will need to be a member of the following project{{ requiredProjects.length > 1 ? 's' : '' }}:
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <span 
+          v-for="project in requiredProjects" 
+          :key="project"
+          class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded text-sm font-mono font-medium"
+        >
+          {{ project }}
+        </span>
+      </div>
+    </div>
+    
     <pre class="bg-gray-800 text-green-400 p-3 rounded text-sm overflow-x-auto"><code>{{ quickStartCode }}</code></pre>
     
     <div class="mt-3">
@@ -47,6 +68,7 @@ import ToggleSwitch from 'primevue/toggleswitch'
 interface Props {
   datastoreName: string
   currentFilters: Record<string, string[]>
+  rawData: any[]
 }
 
 const props = defineProps<Props>()
@@ -57,6 +79,29 @@ const isXArrayMode = ref(false)
 // Computed properties
 const hasActiveFilters = computed(() => {
   return Object.values(props.currentFilters).some(value => value && value.length > 0)
+})
+
+const requiredProjects = computed(() => {
+  const projects = new Set<string>()
+  
+  // Look for path fields in the data
+  props.rawData.forEach(row => {
+    // Check various possible path field names
+    const pathFields = ['path', 'file_path', 'filepath', 'file_id']
+    
+    for (const field of pathFields) {
+      if (row[field]) {
+        const pathValue = row[field]
+        // Match pattern /g/data/{PROJECT}/...
+        const match = pathValue.match(/\/g\/data\/([^\/]+)\//)
+        if (match) {
+          projects.add(match[1])
+        }
+      }
+    }
+  })
+  
+  return Array.from(projects).sort()
 })
 
 const quickStartCode = computed(() => {
