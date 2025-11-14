@@ -236,22 +236,39 @@ import Dialog from 'primevue/dialog'
 import CatalogRowDetailModal from './CatalogRowDetailModal.vue'
 import { useCatalogStore } from '../stores/catalogStore'
 
+/**
+ * Catalog table uses the catalog store to fetch and display catalog entries.
+ *
+ * Notes:
+ * - The component triggers a fetch on mount via the store.
+ * - The DataTable displays `filteredData` and exposes row detail and
+ *   array-preview modals for richer display of array-valued fields.
+ */
 const catalogStore = useCatalogStore()
 
 // Trigger data fetch on component mount
 catalogStore.fetchCatalogData()
 
-// Global search
+/**
+ * Global search string used to filter catalog rows client-side.
+ */
 const globalSearchValue = ref('')
 
-// Filtered data based on search
+/**
+ * Filtered data derived from the store's data and `globalSearchValue`.
+ *
+ * Behavior:
+ * - When `globalSearchValue` is empty, returns all catalog data from the store.
+ * - Otherwise performs a case-insensitive substring match across a set of
+ *   searchable fields (name, description, and precomputed searchable fields).
+ */
 const filteredData = computed(() => {
   if (!globalSearchValue.value.trim()) {
     return catalogStore.data
   }
-  
+
   const searchTerm = globalSearchValue.value.toLowerCase()
-  
+
   return catalogStore.data.filter(row => {
     return (
       row.name?.toLowerCase().includes(searchTerm) ||
@@ -264,7 +281,10 @@ const filteredData = computed(() => {
   })
 })
 
-// Define available columns
+/**
+ * The available table columns (field + header). Kept as refs so the
+ * MultiSelect component can bind to them.
+ */
 const columns = ref([
   { field: 'name', header: 'Name' },
   { field: 'model', header: 'Model/ Data Source' },
@@ -274,23 +294,36 @@ const columns = ref([
   { field: 'variable', header: 'Variable' }
 ])
 
-// Selected columns (all by default)
+/** Selected columns (initially all columns). */
 const selectedColumns = ref([...columns.value])
 
 // Array modal state
+/** Whether the small modal showing all array items is visible. */
 const arrayModalVisible = ref(false)
+/** Title for the array modal (usually the column header). */
 const arrayModalTitle = ref('')
+/** Items shown in the array modal. */
 const arrayModalItems = ref<string[]>([])
 
-// Row detail modal state  
+// Row detail modal state
+/** Whether the row-detail modal is visible. */
 const detailModalVisible = ref(false)
-const selectedRowData = ref(null)
+/** The currently selected row object for the detail modal. */
+const selectedRowData = ref<any | null>(null)
 
-// Array field detection
+/**
+ * Set of fields which are considered array-valued in the data.
+ * Used by `isArrayField` to decide rendering strategy.
+ */
 const arrayFields = ['model', 'realm', 'frequency', 'variable']
 const isArrayField = (fieldName: string) => arrayFields.includes(fieldName)
 
-// Get preview text for array fields
+/**
+ * Returns a short preview string for an array-valued field. Examples:
+ * - [] => 'None'
+ * - ['A'] => 'A'
+ * - ['A', 'B', 'C'] => 'A (+2 more)'
+ */
 const getArrayPreview = (value: string[] | string) => {
   if (Array.isArray(value)) {
     if (value.length === 0) return 'None'
@@ -300,26 +333,38 @@ const getArrayPreview = (value: string[] | string) => {
   return value || ''
 }
 
-// Open array modal
+/**
+ * Open the small modal that lists all values for an array field.
+ *
+ * @param items - array of string items to show
+ * @param title - header/title for the modal (usually column header)
+ */
 const openArrayModal = (items: string[], title: string) => {
   arrayModalTitle.value = title
   arrayModalItems.value = items
   arrayModalVisible.value = true
 }
 
-// Show row detail modal
+/**
+ * Show the row detail modal and set the selected row payload.
+ * @param rowData - the row object to display in detail modal
+ */
 const showRowDetail = (rowData: any) => {
   selectedRowData.value = rowData
   detailModalVisible.value = true
 }
 
-// Hide row detail modal
+/** Hide the row detail modal and clear selection. */
 const hideRowDetail = () => {
   detailModalVisible.value = false
   selectedRowData.value = null
 }
 
-// Column toggle handler
+/**
+ * Column selection toggle handler used by the MultiSelect. The handler
+ * receives the currently selected option objects and updates
+ * `selectedColumns` accordingly.
+ */
 const onToggle = (value: any[]) => {
   selectedColumns.value = columns.value.filter(col => value.includes(col))
 }

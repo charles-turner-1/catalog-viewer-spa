@@ -79,18 +79,43 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import Dialog from 'primevue/dialog'
 
 // Props
+/**
+ * Component props for QuickStartCode.
+ *
+ * The component expects the datastore name, the current set of active
+ * filters (per-column), and the raw results from the search/catalog query.
+ */
 interface Props {
+  /**
+   * The name of the intake datastore to target (used when generating
+   * the quick-start Python snippet).
+   */
   datastoreName: string
+
+  /**
+   * Object mapping column names to an array of selected filter values.
+   * Example: { project: ['xp65'], variable: ['tas'] }
+   */
   currentFilters: Record<string, string[]>
+
+  /**
+   * The raw data rows returned by the catalog/search. Each row is expected
+   * to be an object and may contain fields such as `path` and `file_id`.
+   */
   rawData: any[]
 }
 
+/** The typed props object (available in <script setup> via defineProps). */
 const props = defineProps<Props>()
 
 // Vue Router
 const router = useRouter()
 
 // Reactive state
+/**
+ * When true, generate xarray/dask conversion calls in the quick-start code.
+ * Default: false (generate datastore access/search only).
+ */
 const isXArrayMode = ref(false)
 
 // Dialog / long-URL state
@@ -117,21 +142,38 @@ const cancelCopyLongUrl = () => {
 }
 
 // Computed properties
+/**
+ * Whether any column filters are currently active.
+ *
+ * Returns true if at least one entry in `props.currentFilters` contains
+ * a non-empty array.
+ */
 const hasActiveFilters = computed(() => {
   return Object.values(props.currentFilters).some(value => value && value.length > 0)
 })
 
+/**
+ * Compute the set of projects that the generated quick-start code will
+ * require access to.
+ *
+ * Behavior:
+ * - Always includes the 'xp65' project by default.
+ * - Scans each row in `props.rawData` for a `path` field and attempts
+ *   to extract a NCI project name using the pattern `/g/data/{PROJECT}/...`.
+ * - Returns a sorted array of unique project names.
+ */
 const requiredProjects = computed(() => {
-  const projects = new Set<string>()
-  
-  // We always require 'xp65' 
-  projects.add('xp65')
-  
+  const projects = new Set<string>();
+
+  // We always require 'xp65'
+  const XP65 = 'xp65';
+  projects.add(XP65);
+
   // Look for path fields in the data
   props.rawData.forEach(row => {
     // Check various possible path field names
-    const field = 'path';
-    
+    const field = 'path'
+
     if (row[field]) {
       const pathValue = row[field]
       // Match pattern /g/data/{PROJECT}/...
@@ -141,10 +183,17 @@ const requiredProjects = computed(() => {
       }
     }
   })
-  
+
   return Array.from(projects).sort()
 })
 
+/**
+ * Number of unique datasets present in `props.rawData`.
+ *
+ * This counts unique `file_id` values using a Set. Useful for deciding
+ * whether the generated xarray snippet should produce a dictionary of
+ * datasets or a single dataset.
+ */
 const numDatasets = computed(() => {
   // Use a Set to count unique datasets - one fileId per dataset
   const fileIds = new Set<string>()
@@ -158,11 +207,24 @@ const numDatasets = computed(() => {
   return fileIds.size
 })
 
+/**
+ * Generates the quick-start Python code snippet shown to users.
+ *
+ * The generated snippet will:
+ * - Import `intake` and open the configured datastore name.
+ * - Append search filters derived from `props.currentFilters`.
+ * - Optionally append xarray/dask conversion calls when `isXArrayMode` is
+ *   enabled; it will choose between `to_dataset_dict()` and `to_dask()`
+ *   depending on how many unique datasets are present.
+ *
+ * This is a computed string; update the UI automatically when inputs
+ * change.
+ */
 const quickStartCode = computed(() => {
   let code = `# In an ARE session on Gadi: https://are.nci.org.au/pun/sys/dashboard
 import intake
 datastore = intake.cat.access_nri["${props.datastoreName}"]`
-  
+
   if (hasActiveFilters.value) {
     for (const [column, values] of Object.entries(props.currentFilters)) {
       if (values && values.length > 0) {
@@ -175,7 +237,7 @@ datastore = intake.cat.access_nri["${props.datastoreName}"]`
       }
     }
   }
-  
+
   // Add XArray conversion if in XArray mode
   if (isXArrayMode.value) {
 
@@ -184,19 +246,28 @@ datastore = intake.cat.access_nri["${props.datastoreName}"]`
       code += `\n# To get to a single dataset, you will need to filter down to a single File ID.`
       code += `\ndataset_dict = datastore.to_dataset_dict()`
     } else {
-    code += `\ndataset = datastore.to_dask()`
+      code += `\ndataset = datastore.to_dask()`
     }
   }
-  
+
   return code
 })
 
-// Methods
-
-const copyQueryLink = async () => {
-  // Build query parameters from current filters
+/**
+ * Copy a link to the current page including active filters to the clipboard.
+ *
+ * The URL query parameters will use the convention `<column>_filter` with
+ * comma-separated values. The function attempts to write to the
+ * clipboard and logs success or failure. A UI toast can be added where
+ * the TODO comment is placed.
+ *
+ * @returns Promise<void> that resolves when the clipboard write completes.
+ */
+const copyQueryLink = async (): Promise<void> => {
   const query: Record<string, string> = {}
-  
+  const url = new URL(window.location.href)
+
+  // Add filter parameters to URL
   for (const [column, values] of Object.entries(props.currentFilters)) {
     if (values && values.length > 0) {
       query[`${column}_filter`] = values.join(',')
@@ -226,7 +297,8 @@ const copyQueryLink = async () => {
     // TODO: Show toast notification
     console.log('Query link copied to clipboard:', fullUrl)
   } catch (err) {
-    console.error('Failed to copy link:', err)
+    console.error('Failed to copy link:');
+    console.error(err);
   }
 }
 </script>
