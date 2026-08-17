@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mount, VueWrapper } from '@vue/test-utils';
+import { mount, VueWrapper, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import { createRouter, createMemoryHistory, type Router } from 'vue-router';
 import MetacatTable from '../MetacatTable.vue';
 import { useCatalogStore } from '../../stores/catalogStore';
 import PrimeVue from 'primevue/config';
@@ -17,6 +18,7 @@ describe('MetacatTable', () => {
   let wrapper: VueWrapper<any>;
   let pinia: ReturnType<typeof createPinia>;
   let catalogStore: ReturnType<typeof useCatalogStore>;
+  let router: Router;
 
   beforeEach(() => {
     pinia = createPinia();
@@ -25,13 +27,19 @@ describe('MetacatTable', () => {
 
     // Mock the fetchCatalogData method to prevent actual API calls
     vi.spyOn(catalogStore, 'fetchCatalogData').mockImplementation(() => Promise.resolve());
+
+    // Metacat now syncs filters with the URL, so it needs a router with a Home route.
+    router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', name: 'Home', component: { template: '<div />' } }],
+    });
   });
 
   // Helper to create wrapper with global config
   const createWrapper = () => {
     return mount(MetacatTable, {
       global: {
-        plugins: [pinia, PrimeVue, ToastService],
+        plugins: [pinia, router, PrimeVue, ToastService],
         stubs: {
           DataTable: true,
           Column: true,
@@ -764,5 +772,45 @@ describe('MetacatTable', () => {
     // scalar values should be coerced to strings and included
     expect(opts.realm).toContain('atmos');
     expect(opts.frequency).toContain('monthly');
+  });
+
+  // ---------------------------------------------------------------------------
+  // URL filter sync (issue #257)
+  // ---------------------------------------------------------------------------
+
+  // Test that filters are hydrated from the URL query string on mount
+  it('hydrates currentFilters from the URL query string on mount', async () => {
+    await router.push({ name: 'Home', query: { model_filter: 'modelA,modelB', realm_filter: 'ocean' } });
+    await router.isReady();
+
+    wrapper = createWrapper();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.vm.currentFilters).toEqual({ model: ['modelA', 'modelB'], realm: ['ocean'] });
+  });
+
+  // Test that changing filters is pushed back to the URL query string
+  it('writes filter changes back to the URL query string', async () => {
+    wrapper = createWrapper();
+    await wrapper.vm.$nextTick();
+
+    wrapper.vm.currentFilters = { realm: ['atmos'] };
+    await flushPromises();
+
+    expect(router.currentRoute.value.query).toEqual({ realm_filter: 'atmos' });
+  });
+
+  // Test that clearing filters empties the URL query string
+  it('clears the URL query string when filters are cleared', async () => {
+    await router.push({ name: 'Home', query: { realm_filter: 'atmos' } });
+    await router.isReady();
+
+    wrapper = createWrapper();
+    await wrapper.vm.$nextTick();
+
+    wrapper.vm.clearFilters();
+    await flushPromises();
+
+    expect(router.currentRoute.value.query).toEqual({});
   });
 });

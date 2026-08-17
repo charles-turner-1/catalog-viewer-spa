@@ -247,7 +247,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
@@ -260,6 +261,7 @@ import CatalogRowDetailModal from './MetacatRowDetailModal.vue';
 import FilterSelectors from './FilterSelectors.vue';
 import { useCatalogStore } from '../stores/catalogStore';
 import { useFilterState } from '../composables/useFilterState';
+import { useFilterUrlSync } from '../composables/useFilterUrlSync';
 import { filterRowsBySelectedFilters, useDynamicFilterOptions } from '../composables/useDynamicFilterOptions';
 import { fuzzyMatchesSearch } from '../composables/useFuzzyFilter';
 import type { CatalogRow } from '../types/catalog';
@@ -291,6 +293,23 @@ const globalSearchValue = ref('');
  * values are arrays of selected option strings.
  */
 const { currentFilters, clearFilters } = useFilterState();
+
+/**
+ * Keep filter selections synchronized with the URL query string so that
+ * filtered views are shareable and survive a page reload. Reuses the same
+ * `*_filter` scheme as the datastore-detail views (see issue #257).
+ */
+const route = useRoute();
+const router = useRouter();
+const { initializeFiltersFromUrl, stopFilterWatcher } = useFilterUrlSync(route, router, currentFilters, 'Home');
+
+onMounted(() => {
+  initializeFiltersFromUrl();
+});
+
+onUnmounted(() => {
+  stopFilterWatcher();
+});
 
 /**
  * Filtered data derived from the store's data and `globalSearchValue`.
