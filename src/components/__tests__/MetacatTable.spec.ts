@@ -774,10 +774,6 @@ describe('MetacatTable', () => {
     expect(opts.frequency).toContain('monthly');
   });
 
-  // ---------------------------------------------------------------------------
-  // URL filter sync (issue #257)
-  // ---------------------------------------------------------------------------
-
   // Test that filters are hydrated from the URL query string on mount
   it('hydrates currentFilters from the URL query string on mount', async () => {
     await router.push({ name: 'Home', query: { model_filter: 'modelA,modelB', realm_filter: 'ocean' } });
