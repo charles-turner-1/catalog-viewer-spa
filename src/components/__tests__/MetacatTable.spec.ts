@@ -3,6 +3,7 @@ import { mount, VueWrapper, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { createRouter, createMemoryHistory, type Router } from 'vue-router';
 import MetacatTable from '../MetacatTable.vue';
+import * as filterUrlSyncModule from '../../composables/useFilterUrlSync';
 import { useCatalogStore } from '../../stores/catalogStore';
 import PrimeVue from 'primevue/config';
 import ToastService from 'primevue/toastservice';
@@ -812,5 +813,23 @@ describe('MetacatTable', () => {
     await flushPromises();
 
     expect(router.currentRoute.value.query).toEqual({});
+  });
+
+  // Test that the filter watcher is stopped when the component unmounts
+  it('stops the filter watcher on unmount', () => {
+    const stopFilterWatcher = vi.fn();
+    const spy = vi.spyOn(filterUrlSyncModule, 'useFilterUrlSync').mockReturnValue({
+      initializeFiltersFromUrl: vi.fn(),
+      updateUrlWithFilters: vi.fn(),
+      stopFilterWatcher,
+    });
+
+    wrapper = createWrapper();
+    expect(stopFilterWatcher).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+    expect(stopFilterWatcher).toHaveBeenCalledTimes(1);
+
+    spy.mockRestore();
   });
 });
