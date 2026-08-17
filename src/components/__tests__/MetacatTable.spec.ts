@@ -813,7 +813,13 @@ describe('MetacatTable', () => {
 
   // Test that the filter watcher is stopped when the component unmounts
   it('stops the filter watcher on unmount', () => {
-    const stopFilterWatcher = vi.fn();
+    // The real stopFilterWatcher is a Vue WatchHandle: a callable that also
+    // carries pause/resume/stop, so the mock mirrors that shape.
+    const stopFilterWatcher = Object.assign(vi.fn(), {
+      pause: vi.fn(),
+      resume: vi.fn(),
+      stop: vi.fn(),
+    });
     const spy = vi.spyOn(filterUrlSyncModule, 'useFilterUrlSync').mockReturnValue({
       initializeFiltersFromUrl: vi.fn(),
       updateUrlWithFilters: vi.fn(),
