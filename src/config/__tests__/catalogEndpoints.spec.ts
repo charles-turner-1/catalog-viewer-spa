@@ -44,7 +44,7 @@ describe('catalogEndpoints', () => {
     vi.resetModules();
 
     const { trackingServicesBaseUrl: prodUrl } = await import('../catalogEndpoints');
-    expect(prodUrl).toBe('https://reporting.access-nri-store.cloud.edu.au/');
+    expect(prodUrl).toBe('https://reporting-dev2.access-nri-store.cloud.edu.au/');
 
     vi.unstubAllEnvs();
     vi.resetModules();
