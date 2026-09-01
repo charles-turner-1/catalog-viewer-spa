@@ -107,7 +107,7 @@ const openCondaAnalysis3Docs = (): void => {
  * Opens the Hive Docs page for workshop 20205
  */
 const openHiveDocs = (): void => {
-  const url = 'FILL_THIS_IN';
+  const url = 'https://docs.access-hive.org.au/tutorials/2026_ESMLAND_Data_catalogue_ARE_setup/';
   window.open(url, '_blank');
 };
 </script>
