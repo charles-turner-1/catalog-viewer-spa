@@ -44,8 +44,8 @@ describe('RequiredProjectsWarning', () => {
     expect(wrapper.text()).toContain('dk92');
     expect(wrapper.text()).toContain('ab12');
     const projectSpans = wrapper.findAll('span').filter((span) => span.classes().includes('px-2'));
-    expect(projectSpans.length).toBe(3 + 1 + 1);
-    // Extra span for the conda warning now, and a temporary +1 for the Hive docs
+    expect(projectSpans.length).toBe(3 + 1);
+    // Extra span for the conda warning now
   });
 
   // Test that singular "project" text is used when only one project
